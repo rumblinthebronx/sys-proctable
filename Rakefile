@@ -27,7 +27,7 @@ task :build => [:clean] do
       dir = 'ext/hpux'
   end
 
-  unless CONFIG['host_os'] =~ /win32|mswin|dos|cygwin|mingw|windows|linux|sunos|solaris/i
+  unless CONFIG['host_os'] =~ /win32|mswin|dos|cygwin|mingw|windows|linux|sunos|solaris/i || RUBY_ENGINE == "jruby"
     Dir.chdir(dir) do
       ruby 'extconf.rb'
       sh 'make'
