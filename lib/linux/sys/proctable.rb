@@ -1,3 +1,5 @@
+require 'os'
+
 # The Sys module serves as a namespace only.
 module Sys
 
@@ -78,6 +80,72 @@ module Sys
 
     ProcTableStruct = Struct.new('ProcTableStruct', *@fields)
 
+    # Returns an Array of Proctable structs or just the matching one if +pid+ is given.
+    #
+    # @param [Integer] process_id The ID of the process to be looked up.
+    # @return [Array<ProcTable>, ProcTable] 
+    def self.ps_mac(process_id=-100)
+      output = `ps aux`
+      output = output.split "\n"
+      output.delete output.first
+      result = []
+
+      output.each do |process_info|
+        struct = ProcTableStruct.new
+        process_info = process_info.split "  "
+        process_info.delete ""
+        user_info = `id #{process_info.first}`
+        /uid=((?<uid>\d*))/ =~ user_info
+        /gid=((?<gid>\d*))/ =~ user_info
+        pid = process_info[1].to_i
+        /[\.|\:]\d\d (?<cmdline>.*)/ =~ process_info.last
+        struct.pid = pid
+        struct.uid = uid.to_i
+        struct.gid = gid.to_i
+        struct.cmdline = cmdline
+        return struct if pid == process_id    
+        result << struct
+      end
+
+      raise "Process #{process_id} not found" if process_id.to_i > 0
+      result
+    end
+
+    # Returns an Array of Proctable structs or just the matching one if +pid+ is given.
+    #
+    # @param [Integer] process_id The ID of the process to be looked up.
+    # @return [Array<ProcTable>, ProcTable] 
+    def self.ps_windows(process_id=-100)
+      output = `tasklist`
+      output = output.split "\n"
+      output.delete output.first
+      output.delete output.first
+      output.delete output.first
+      result = []
+
+      output.each do |process_info|
+        struct = ProcTableStruct.new
+        struct.cmdline ||= ""
+        process_info = process_info.split
+        process_info.each do |field|
+          pid = Integer(field) rescue nil  
+
+          if pid.nil?
+            struct.cmdline += field
+          else
+            struct.pid = pid
+            return struct if pid == process_id         
+            break
+          end            
+        end
+
+        result << struct
+      end
+      
+      raise "Process #{process_id} not found" if process_id.to_i > 0
+      result
+    end
+
     # In block form, yields a ProcTableStruct for each process entry that you
     # have rights to. This method returns an array of ProcTableStruct's in
     # non-block form.
@@ -102,6 +170,9 @@ module Sys
     #  either return all information for a process, or none at all.
     #
     def self.ps(pid=nil)
+      return ps_mac(pid ||-100) if OS.mac?
+      return ps_windows(pid ||-100) if OS.windows?
+      raise NotImplementedError unless OS.linux?
       array  = block_given? ? nil : []
       struct = nil
 

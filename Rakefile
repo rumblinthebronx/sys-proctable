@@ -46,7 +46,7 @@ task :install => [:build] do
   case CONFIG['host_os']
     when /mswin|win32|msdos|cygwin|mingw|windows/i
       file = 'lib/windows/sys/proctable.rb'
-    when /linux/i
+    when /linux|java/i
       file = 'lib/linux/sys/proctable.rb'
     when /sunos|solaris/i
       file = 'lib/sunos/sys/proctable.rb'
@@ -143,6 +143,12 @@ namespace :gem do
          spec.extensions = ['ext/hpux/extconf.rb']
       when /linux/i
          spec.platform = Gem::Platform.new(['universal', 'linux'])
+         spec.platform = Gem::Platform.new(['universal', 'java']) if RUBY_ENGINE == "jruby"
+         spec.require_paths = ['lib', 'lib/linux']
+         spec.files += ['lib/linux/sys/proctable.rb']
+         spec.test_files << 'test/test_sys_proctable_linux.rb'
+      when /java/i
+         spec.platform = Gem::Platform.new(['universal', 'java'])
          spec.require_paths = ['lib', 'lib/linux']
          spec.files += ['lib/linux/sys/proctable.rb']
          spec.test_files << 'test/test_sys_proctable_linux.rb'
